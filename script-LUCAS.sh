@@ -4,12 +4,11 @@
 source /etc/backup-LUCAS/backup.conf
 
 declare -r exe_path="${0}"
-
-declare log_path=$logdir/$logfile
+declare -r log_path=$logdir/$logfile
 
 # falha caso qualquer item do pipeline falhe
 # falha caso uma variável seja acessada sem ser definida
-# falha o script todo caso qualque comando falhe
+# falha o  todo caso qualque comando falhe
 set -euo pipefail
 
 # padrões:
@@ -44,6 +43,7 @@ if [[ ! -e $log_path ]]; then
 fi  
 
 
+# Verifica se os utilitarios necessarios para a execucao estao instalados
 function check-tools {
     which tar >/dev/null || {
         echo-err "utilitário tar não foi encontrado"
@@ -83,8 +83,36 @@ function main {
 }
 
 function do-check-backup {
-    echo-err "not implemented"
-    return 1
+    declare backup_name="${1}"       
+    declare -r hash_info=$(grep "$backup_name" $log_path)
+
+    if [[ $hash_info ]]; then        
+        IFS=": "
+        read -ra arr <<< "$hash_info"
+        declare stored_hash=${arr[-1]}
+        
+        backup_name=$(echo $backup_name | xargs)
+        declare backup_file="$backupdestination/$backup_name"
+        
+        if [[ ! -f $backup_file ]]; then
+            echo-err "Arquivo de backup nao encontrado"
+            exit 1
+        fi
+
+        declare -r current_hash=$(shasum -a 256 "${backup_file}" | cut -f 1 -d ' ')
+
+        if [[ $stored_hash == $current_hash ]]; then
+            echo "Backup íntegro."
+        else
+            echo "Integridade do backup comprometida."
+        fi
+
+        return 0
+    fi
+
+    echo-err "Log de backup nao encontrado"
+    
+    exit 1
 }
 
 function do-show-usage {
@@ -112,7 +140,6 @@ function do-executar-backup {
     declare backup_name="backup-$(date +"%Y%m%d")-$(date +"%H%M").tar.bz2" 
     declare backup_path="$backupdestination/$backup_name" 
     
-    IFS=','
     check-targetdirs
 
     arquivar-diretorios $backup_path $targetdirs
@@ -125,6 +152,7 @@ function do-executar-backup {
 }
 
 function check-targetdirs {
+    IFS=','
     read -ra directories <<< "$targetdirs"
 
     for path in "${directories[@]}"
@@ -137,34 +165,36 @@ function check-targetdirs {
 }
 
 function arquivar-diretorios {
-    declare -r arquivo_backup="${1}"
+    declare -r backup_file="${1}"
 
     # considera todos os outros parametros como diretórios
     # a serem salvos
     shift
 
-    tar -jcf "${arquivo_backup}" "$@"
+    tar -jcf "${backup_file}" "$@"
 }
 
 function save-log {
-    declare -r arquivo_log="${1}"
-    declare -r arquivo_backup="${2}"
-    declare hash_backup
-    hash_backup=$(shasum -a 256 "${arquivo_backup}" | cut -f 1 -d ' ')
-    readonly hash_backup
-    declare conteudo_backup
-    conteudo_backup=$(tar -tf "${arquivo_backup}")
-    readonly conteudo_backup   
-    declare -r filename=$(basename $arquivo_backup)
+    declare -r log_file="${1}"
+    declare -r backup_file="${2}"
 
-cat <<EOF >> "${arquivo_log}" 
+    declare hash_backup=$(shasum -a 256 "${backup_file}" | cut -f 1 -d ' ');
+    readonly hash_backup
+
+    declare backup_content
+    backup_content=$(tar -tf "${backup_file}")
+    
+    readonly backup_content   
+    declare -r filename=$(basename $backup_file)
+
+cat <<EOF >> "${log_file}" 
 Execução do Backup - ${backup_date}
 Horário de início - ${backup_start_time}
 
 Arquivos inseridos no backup:
-${conteudo_backup}
+${backup_content}
 
-Arquivo gerado: ${arquivo_backup}
+Arquivo gerado: ${backup_file}
 Hash sha256 do ${filename}: ${hash_backup}
 
 Horário da Finalização do backup – ${backup_end_time}
