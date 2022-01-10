@@ -5,7 +5,7 @@ source /etc/backup-LUCAS/backup.conf
 
 declare -r exe_path="${0}"
 
-declare log_path=$log_file
+declare log_path=$logdir/$logfile
 
 # falha caso qualquer item do pipeline falhe
 # falha caso uma variável seja acessada sem ser definida
@@ -16,13 +16,33 @@ set -euo pipefail
 # variável minúscula indica variável local
 # variável maiuscula indica vaiável exportada/importada do ambiente
 
-if [[ ! -e $log_path ]]; then
-    touch $log_path
-fi
-
 function echo-err {
     echo "$@" >&2
 }
+
+if [[ ! -e $logdir ]]; then
+    echo "Criando diretório de logs..."
+
+    if ! mkdir -p $logdir; then
+        echo-err "Abortando...."
+        exit 1
+    fi
+
+    echo "Diretório de logs criado"
+fi
+
+
+if [[ ! -e $log_path ]]; then
+    echo "Criando arquivo de logs..."
+
+    if ! touch "$log_path"; then
+        echo-err "Abortando..."
+        exit 1
+    fi
+
+    echo "Arquivos de logs criado"
+fi  
+
 
 function check-tools {
     which tar >/dev/null || {
@@ -89,12 +109,31 @@ function do-executar-backup {
     readonly backup_date
     readonly backup_start_time
 
-    arquivar-diretorios "./exemplo/backup.tar.bz2" "./exemplo/folder1" "./exemplo/folder2"
+    declare backup_name="backup-$(date +"%Y%m%d")-$(date +"%H%M").tar.bz2" 
+    declare backup_path="$backupdestination/$backup_name" 
+    
+    IFS=','
+    check-targetdirs
+
+    arquivar-diretorios $backup_path $targetdirs
 
     backup_end_time=$(date +"%H:%M:%S")
+
     readonly backup_end_time
 
-    save-log $log_path "./exemplo/backup.tar.bz2"
+    save-log $log_path $backup_path
+}
+
+function check-targetdirs {
+    read -ra directories <<< "$targetdirs"
+
+    for path in "${directories[@]}"
+     do  
+        if [[ ! -d $path ]]; then
+            echo-err "O caminho '$path' não é um diretório válido. Abortando...."
+            exit 1
+        fi
+     done
 }
 
 function arquivar-diretorios {
