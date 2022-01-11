@@ -56,63 +56,39 @@ function check-tools {
     }
 }
 
-function main {
-    check-tools
-    declare OPTIND optkey
-    while getopts "c:bhr:" optkey; do
-        case "${optkey}" in
-            c)
-                do-check-backup "${OPTARG}" && return 0
-                ;;
-            h)
-                do-show-usage && return 0
-                ;;
-            b)
-                do-executar-backup && return 0
-                ;;
-            r)
-                shift $((OPTIND-2))
-                do-restaurar-backup "$@" && return 0;
-                ;;
-            *)
-                do-show-usage && return 1
-                ;;
-        esac
-    done
-    shift $((OPTIND-1))
-}
-
 function do-check-backup {
     declare backup_name="${1}"       
-    declare -r hash_info=$(grep "$backup_name" $log_path)
+    declare -r stored_hash_info=$(grep "$backup_name:" $log_path)
 
-    if [[ $hash_info ]]; then        
-        IFS=": "
-        read -ra arr <<< "$hash_info"
-        declare stored_hash=${arr[-1]}
-        
-        backup_name=$(echo $backup_name | xargs)
-        declare backup_file="$backupdestination/$backup_name"
-        
-        if [[ ! -f $backup_file ]]; then
-            echo-err "Arquivo de backup nao encontrado"
-            exit 1
-        fi
-
-        declare -r current_hash=$(shasum -a 256 "${backup_file}" | cut -f 1 -d ' ')
-
-        if [[ $stored_hash == $current_hash ]]; then
-            echo "Backup íntegro."
-        else
-            echo "Integridade do backup comprometida."
-        fi
-
-        return 0
+    if [[ ! $stored_hash_info ]]; then
+        echo-err "Registro de backup '$backup_name' não encontrado."
+        exit 1
+    fi
+   
+    IFS=": "
+    read -ra arr <<< "$stored_hash_info"
+    declare stored_hash=${arr[-1]}
+    
+    backup_name=$(echo $backup_name | xargs)
+    declare backup_file="$backupdestination/$backup_name"
+    
+    if [[ ! -f $backup_file ]]; then
+        echo-err "Arquivo de backup nao encontrado"
+        exit 1
     fi
 
-    echo-err "Log de backup nao encontrado"
-    
-    exit 1
+    declare -r current_hash=$(shasum -a 256 "${backup_file}" | cut -f 1 -d ' ')
+
+    echo "Stored hash: $stored_hash"
+    echo "File calculated hash: $current_hash"
+
+    if [[ $stored_hash == $current_hash ]]; then
+        echo "Backup íntegro."
+    else
+        echo "Integridade do backup comprometida."
+    fi
+
+    return 0
 }
 
 function do-show-usage {
@@ -138,14 +114,11 @@ function do-executar-backup {
     readonly backup_start_time
 
     declare backup_name="backup-$(date +"%Y%m%d")-$(date +"%H%M").tar.bz2" 
-    declare backup_path="$backupdestination/$backup_name" 
-    
-    check-targetdirs
+    declare backup_path="$backupdestination/$backup_name"    
 
-    arquivar-diretorios $backup_path $targetdirs
+    arquivar-diretorios $backup_path
 
     backup_end_time=$(date +"%H:%M:%S")
-
     readonly backup_end_time
 
     save-log $log_path $backup_path
@@ -158,20 +131,21 @@ function check-targetdirs {
     for path in "${directories[@]}"
      do  
         if [[ ! -d $path ]]; then
-            echo-err "O caminho '$path' não é um diretório válido. Abortando...."
+            echo-err "O caminho '$path' não é válido. Abortando...."
             exit 1
         fi
      done
 }
 
 function arquivar-diretorios {
+    check-targetdirs
     declare -r backup_file="${1}"
 
     # considera todos os outros parametros como diretórios
-    # a serem salvos
+    # a serem salvos uma vez que ja passaram na verificacao.
     shift
 
-    tar -jcf "${backup_file}" "$@"
+    tar -jcf "${backup_file}" $targetdirs
 }
 
 function save-log {
@@ -203,10 +177,39 @@ EOF
 }
 
 function do-restaurar-backup {
-    echo-err "Args: ${*}"
-    echo-err "Arg count: ${#}"
-    echo-err "not implemented [${1} ${2}]"
-    return 1;
+    declare backup_file="$backupdestination/backup-20220111-1418.tar.bz2"
+
+    #tar -xvf $backup_file
+
+    tar -C / -xvf $backup_file home/lucas/Desktop/exemplo/folder1
+    # return 1;
 }
 
-main "${*}"
+function main {
+    check-tools
+    declare OPTIND optkey
+    while getopts "c:bhr:" optkey; do
+        case "${optkey}" in
+            c)
+                do-check-backup "${OPTARG}" && return 0
+                ;;
+            h)
+                do-show-usage && return 0
+                ;;
+            b)
+                do-executar-backup && return 0
+                ;;
+            r)
+                shift $((OPTIND-2))
+                do-restaurar-backup "$@" && return 0;
+                ;;
+            *)
+                do-show-usage && return 1
+                ;;
+        esac
+    done
+    shift $((OPTIND-1))
+}
+
+# main "${*}"
+main "$@"
