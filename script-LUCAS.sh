@@ -65,20 +65,19 @@ function check-tools {
         return 1
     }
 
-    which shasum >/dev/null || {
-        echo-err "utilitário shasum não foi encontrado"
+    which sha256sum >/dev/null || {
+        echo-err "utilitário sha256sum não foi encontrado"
+        return 1
+    }
+
+    which bzip2  >/dev/null || {
+        echo-err "utilitário bzip2 não foi encontrado"
         return 1
     }
 }
 
 function do-verify-backup-integrity {
     declare backup_name="${1}"       
-
-    if ! is-archive-in-accepted-format $backup_file; then
-        echo-err "Arquivo de backup inválido."
-        exit 1
-    fi
-
     declare -r stored_hash_info=$(grep "$backup_name:" $log_path)
 
     if [[ ! $stored_hash_info ]]; then
@@ -93,12 +92,17 @@ function do-verify-backup-integrity {
     backup_name=$(echo $backup_name | xargs)
     declare backup_file="$backupdir/$backup_name"
     
+    if ! is-backup-file-in-accepted-format $backup_file; then
+        echo-err "Arquivo de backup inválido."
+        exit 1
+    fi
+
     if [[ ! -f $backup_file ]]; then
         echo-err "Arquivo de backup nao encontrado"
         exit 1
     fi
 
-    declare -r current_hash=$(shasum -a 256 "${backup_file}" | cut -f 1 -d ' ')
+    declare -r current_hash=$(calculate-hash $backup_file)
 
     echo-info "Stored hash: $stored_hash"
     echo-info "File calculated hash: $current_hash"
@@ -170,17 +174,19 @@ function archive-directiories {
     tar -jcf "${backup_file}" $targetdirs # 2> /dev/null
 }
 
+function calculate-hash {
+    declare -r file="${1}"
+    declare -r hash=$(sha256sum "${backup_file}" | cut -f 1 -d ' ')
+
+    echo "$hash"
+}
+
 function save-log {
     declare -r log_file="${1}"
     declare -r backup_file="${2}"
 
-    declare hash_backup=$(shasum -a 256 "${backup_file}" | cut -f 1 -d ' ');
-    readonly hash_backup
-
-    declare backup_content
-    backup_content=$(tar -tf "${backup_file}")
-    
-    readonly backup_content   
+    declare -r hash_backup=$(calculate-hash $backup_file)
+    declare -r backup_content=$(tar -tf "${backup_file}") 
     declare -r filename=$(basename $backup_file)
 
 cat <<EOF >> "${log_file}" 
@@ -198,7 +204,7 @@ Horário da Finalização do backup – ${backup_end_time}
 EOF
 }
 
-function is-archive-in-accepted-format {
+function is-backup-file-in-accepted-format {
     declare file="${1}"  
 
     if [[ $file == *.bz2 ]]; then
@@ -215,7 +221,7 @@ function do-backup-restore {
     declare -r backup_file="$backupdir/$backup_name"
     declare target=""
 
-    if ! is-archive-in-accepted-format $backup_file; then
+    if ! is-backup-file-in-accepted-format $backup_file; then
         echo-err "Arquivo de backup inválido."
         exit 1
     fi
