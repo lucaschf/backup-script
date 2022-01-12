@@ -16,20 +16,23 @@ set -euo pipefail
 # variável maiuscula indica vaiável exportada/importada do ambiente
 
 function echo-err {
-    echo "$@" >&2
+    echo "ERR: $@" >&2
+}
+
+function echo-info {
+    echo "INFO: $@" >&2
 }
 
 if [[ ! -e $logdir ]]; then
-    echo "Criando diretório de logs..."
+    echo-info "Criando diretório de logs..."
 
     if ! mkdir -p $logdir; then
         echo-err "Abortando...."
         exit 1
     fi
 
-    echo "Diretório de logs criado"
+    echo-info "Diretório de logs criado"
 fi
-
 
 if [[ ! -e $log_path ]]; then
     echo "Criando arquivo de logs..."
@@ -39,9 +42,20 @@ if [[ ! -e $log_path ]]; then
         exit 1
     fi
 
-    echo "Arquivos de logs criado"
-fi  
+    echo "Arquivo de logs criado"
+fi  S
 
+if [[ ! -e $backupdir ]]; then
+    echo-info "Criando diretório de backups..."
+
+    if ! mkdir -p $backupdir; then
+        echo-err "Abortando...."
+        exit 1
+    fi
+
+    echo-info "Diretório de backups criado"
+
+fi
 
 # Verifica se os utilitarios necessarios para a execucao estao instalados
 function check-tools {
@@ -56,7 +70,7 @@ function check-tools {
     }
 }
 
-function do-check-backup {
+function do-verify-backup-integrity {
     declare backup_name="${1}"       
     declare -r stored_hash_info=$(grep "$backup_name:" $log_path)
 
@@ -70,7 +84,7 @@ function do-check-backup {
     declare stored_hash=${arr[-1]}
     
     backup_name=$(echo $backup_name | xargs)
-    declare backup_file="$backupdestination/$backup_name"
+    declare backup_file="$backupdir/$backup_name"
     
     if [[ ! -f $backup_file ]]; then
         echo-err "Arquivo de backup nao encontrado"
@@ -79,13 +93,13 @@ function do-check-backup {
 
     declare -r current_hash=$(shasum -a 256 "${backup_file}" | cut -f 1 -d ' ')
 
-    echo "Stored hash: $stored_hash"
-    echo "File calculated hash: $current_hash"
+    echo-info "Stored hash: $stored_hash"
+    echo-info "File calculated hash: $current_hash"
 
     if [[ $stored_hash == $current_hash ]]; then
-        echo "Backup íntegro."
+        echo-info "Backup íntegro."
     else
-        echo "Integridade do backup comprometida."
+        echo-info "Integridade do backup comprometida."
     fi
 
     return 0
@@ -95,18 +109,18 @@ function do-show-usage {
     cat >&2 <<EOF
 Usage: ${exe_path} <-h|-c <caminho para o arquivo bz2>|-r <diretorios para restaurar>|-b>
 
-    -c <caminho>            : Verifica o sha256 do arquivo <caminho> comparando-o com o log de execução
+    -c <caminho>                   : Verifica o sha256 do arquivo <caminho> comparando-o com o log de execução
 
-    -r <dir1> <dir2> <dir3> : Restaura o conteúdo dos diretórios <dir1>, <dir2> e <dir3>
+    -r <backup_file_path> <dir...> : Restaura o conteúdo dos diretórios <dir> a partir do arquivo de backup <backup_file_path>
 
-    -b                      : Efetua o backup de acordo com o arquivo .conf
+    -b                             : Efetua o backup de acordo com o arquivo .conf
 
-    -h                      : Exibe este menu
+    -h                             : Exibe este menu
 
 EOF
 }
 
-function do-executar-backup {
+function do-create-backup {
     declare backup_date backup_start_time backup_end_time
     backup_date=$(date +"%d/%m/%Y")
     backup_start_time=$(date +"%H:%M:%S")
@@ -114,9 +128,9 @@ function do-executar-backup {
     readonly backup_start_time
 
     declare backup_name="backup-$(date +"%Y%m%d")-$(date +"%H%M").tar.bz2" 
-    declare backup_path="$backupdestination/$backup_name"    
+    declare backup_path="$backupdir/$backup_name"    
 
-    arquivar-diretorios $backup_path
+    archive-directiories $backup_path
 
     backup_end_time=$(date +"%H:%M:%S")
     readonly backup_end_time
@@ -124,6 +138,7 @@ function do-executar-backup {
     save-log $log_path $backup_path
 }
 
+# verifica se os diretorios especificados para backup sao diretorios validos.
 function check-targetdirs {
     IFS=','
     read -ra directories <<< "$targetdirs"
@@ -137,15 +152,14 @@ function check-targetdirs {
      done
 }
 
-function arquivar-diretorios {
+function archive-directiories {
     check-targetdirs
     declare -r backup_file="${1}"
 
-    # considera todos os outros parametros como diretórios
-    # a serem salvos uma vez que ja passaram na verificacao.
+    # considera todos os outros parametros como diretórios a serem salvos.
     shift
 
-    tar -jcf "${backup_file}" $targetdirs
+    tar -jcf "${backup_file}" $targetdirs # 2> /dev/null
 }
 
 function save-log {
@@ -176,13 +190,43 @@ Horário da Finalização do backup – ${backup_end_time}
 EOF
 }
 
-function do-restaurar-backup {
-    declare backup_file="$backupdestination/backup-20220111-1418.tar.bz2"
+function do-backup-restore {
+    declare -r args=("$@")
+    declare -r args_count=${#args[@]}
 
-    #tar -xvf $backup_file
+    if [[ $args_count < 2 ]]; then
+        echo-err "Informe o diretorio a ser restaurado"
+        exit 1
+    fi
 
-    tar -C / -xvf $backup_file home/lucas/Desktop/exemplo/folder1
-    # return 1;
+    declare -r backup_name=${args[0]}
+    declare -r backup_file="$backupdir/$backup_name"
+    declare target=""
+
+    if [[ ! -f $backup_file ]]; then
+        echo-err "Arquivo de backup nao encontrado."
+        exit 1
+    fi
+
+    declare backup_content
+    backup_content=$(tar -tf "${backup_file}")
+
+    declare arg
+    for (( i=1; i<args_count; i++ ));
+    do
+        arg=${args[$i]}
+
+        if ! tar -tf $backup_file $arg >/dev/null 2>&1; then
+            echo-err "O diretório '$arg' não está contido no backup '$backup_name'."
+            exit 1    
+        fi
+
+        target+=" $arg"
+    done
+
+    echo-info "Iniciando restauração..."
+    tar -C / -xf $backup_file $target
+    echo-info "Restauração realizada com sucesso."
 }
 
 function main {
@@ -191,25 +235,42 @@ function main {
     while getopts "c:bhr:" optkey; do
         case "${optkey}" in
             c)
-                do-check-backup "${OPTARG}" && return 0
+                do-verify-backup-integrity "${OPTARG}" && return 0
                 ;;
             h)
                 do-show-usage && return 0
                 ;;
             b)
-                do-executar-backup && return 0
+                do-create-backup && return 0
                 ;;
             r)
-                shift $((OPTIND-2))
-                do-restaurar-backup "$@" && return 0;
+                getopts-extra "$@"
+                args=( "${OPTARG[@]}" )
+                do-backup-restore "${args[@]}" && return 0;
                 ;;
             *)
                 do-show-usage && return 1
                 ;;
         esac
     done
+    if [ $OPTIND -eq 1 ]; then
+        echo-err "No options were passed."
+        do-show-usage && return 1
+    fi
     shift $((OPTIND-1))
 }
 
-# main "${*}"
+# function check-args {
+
+# }
+
+function getopts-extra () {
+    declare i=1
+    # if the next argument is not an option, then append it to array OPTARG
+    while [[ ${OPTIND} -le $# && ${!OPTIND:0:1} != '-' ]]; do
+        OPTARG[i]=${!OPTIND}
+        let i++ OPTIND++
+    done
+}
+
 main "$@"
