@@ -14,9 +14,9 @@ source $config_file_path
 declare -r exe_path="${0}"
 declare -r log_path=$logdir/$logfile
 
-# falha caso qualquer item do pipeline falhe
-# falha caso uma variável seja acessada sem ser definida
-# falha o  todo caso qualque comando falhe
+# fails if any pipeline item fails
+# fails if a variable is accessed without being set
+# fails if any command fails
 set -euo pipefail
 
 
@@ -85,7 +85,7 @@ function check-and-create-directories-and-files-as-needed {
     fi
 }
 
-# Verifica se os utilitarios necessarios para a execucao estao instalados
+# Checks if the utilities needed for the execution are installed
 function check-tools {
     which tar >/dev/null || {
         echo-err "tar utility not found."
@@ -120,9 +120,6 @@ function do-verify-backup-integrity {
     IFS=": "
     read -ra arr <<< "$stored_hash_info"
     declare stored_hash=${arr[-1]}
-    
-    # backup_name=$(echo $backup_name | xargs)
-    # declare backup_file="$backupdir/$backup_name"
     
     if ! is-backup-file-in-accepted-format $backup_file; then
         echo-err "Invalid backup file."
@@ -186,7 +183,7 @@ function do-create-backup {
     echo-info "Finished."
 }
 
-# verifica se os diretorios especificados para backup sao diretorios validos.
+# checks whether the directories specified for backup are valid ones.
 function check-targetdirs {
     IFS=','
     read -ra directories <<< "$targetdirs"
@@ -204,7 +201,7 @@ function archive-directiories {
     check-targetdirs
     declare -r backup_file="${1}"
 
-    # considera todos os outros parametros como diretórios a serem salvos.
+    # considers all other parameters as directories to be saved.
     shift
 
     tar -jcf "${backup_file}" $targetdirs 2> /dev/null
@@ -255,8 +252,8 @@ function is-backup-file-in-accepted-format {
 function do-backup-restore {
     declare -r args=("$@")
     declare -r args_count=${#args[@]}
-    declare -r backup_name=${args[0]}
-    declare -r backup_file="$backupdir/$backup_name"
+    declare -r backup_file=${args[0]}   
+    declare -r backup_name="${backup_file##*/}"
     declare target=""
 
     if ! is-backup-file-in-accepted-format $backup_file; then
