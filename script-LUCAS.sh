@@ -34,6 +34,7 @@ if [[ ! -e $logdir ]]; then
     echo-info "Diretório de logs criado"
 fi
 
+
 if [[ ! -e $log_path ]]; then
     echo "Criando arquivo de logs..."
 
@@ -43,7 +44,7 @@ if [[ ! -e $log_path ]]; then
     fi
 
     echo "Arquivo de logs criado"
-fi  S
+fi  
 
 if [[ ! -e $backupdir ]]; then
     echo-info "Criando diretório de backups..."
@@ -72,6 +73,12 @@ function check-tools {
 
 function do-verify-backup-integrity {
     declare backup_name="${1}"       
+
+    if ! is-archive-in-accepted-format $backup_file; then
+        echo-err "Arquivo de backup inválido."
+        exit 1
+    fi
+
     declare -r stored_hash_info=$(grep "$backup_name:" $log_path)
 
     if [[ ! $stored_hash_info ]]; then
@@ -107,11 +114,12 @@ function do-verify-backup-integrity {
 
 function do-show-usage {
     cat >&2 <<EOF
-Usage: ${exe_path} <-h|-c <caminho para o arquivo bz2>|-r <diretorios para restaurar>|-b>
+Usage: ${exe_path} <-h|-c <caminho para o arquivo bz2>|-r <backup_file_path> [diretorios para restaurar...]|-b>
 
     -c <caminho>                   : Verifica o sha256 do arquivo <caminho> comparando-o com o log de execução
 
-    -r <backup_file_path> <dir...> : Restaura o conteúdo dos diretórios <dir> a partir do arquivo de backup <backup_file_path>
+    -r <backup_file_path> [dir...] : Restaura o conteúdo a partir do arquivo de backup <backup_file_path>. 
+                                   O parametro dir é opcional e caso informado, apenas os diretorios especificados serão restaurados.
 
     -b                             : Efetua o backup de acordo com o arquivo .conf
 
@@ -190,29 +198,35 @@ Horário da Finalização do backup – ${backup_end_time}
 EOF
 }
 
+function is-archive-in-accepted-format {
+    declare file="${1}"  
+
+    if [[ $file == *.bz2 ]]; then
+        return 0
+    fi
+    
+    return 1
+}   
+
 function do-backup-restore {
     declare -r args=("$@")
     declare -r args_count=${#args[@]}
-
-    if [[ $args_count < 2 ]]; then
-        echo-err "Informe o diretorio a ser restaurado"
-        exit 1
-    fi
-
     declare -r backup_name=${args[0]}
     declare -r backup_file="$backupdir/$backup_name"
     declare target=""
+
+    if ! is-archive-in-accepted-format $backup_file; then
+        echo-err "Arquivo de backup inválido."
+        exit 1
+    fi
 
     if [[ ! -f $backup_file ]]; then
         echo-err "Arquivo de backup nao encontrado."
         exit 1
     fi
 
-    declare backup_content
-    backup_content=$(tar -tf "${backup_file}")
-
     declare arg
-    for (( i=1; i<args_count; i++ ));
+    for (( i=1; i<$args_count; i++ ));
     do
         arg=${args[$i]}
 
@@ -259,10 +273,6 @@ function main {
     fi
     shift $((OPTIND-1))
 }
-
-# function check-args {
-
-# }
 
 function getopts-extra () {
     declare i=1
