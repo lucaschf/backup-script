@@ -1,7 +1,15 @@
 #!/usr/bin/bash
 
 # configuration file path
-source /etc/backup-LUCAS/backup.conf
+declare -r config_file_path=/etc/backup-LUCAS/backup.conf
+
+
+if [[ ! -f $config_file_path ]]; then
+    echo "ERR: Arquivo de configuração não encontrado"
+    exit 1
+fi   
+
+source $config_file_path
 
 declare -r exe_path="${0}"
 declare -r log_path=$logdir/$logfile
@@ -11,9 +19,28 @@ declare -r log_path=$logdir/$logfile
 # falha o  todo caso qualque comando falhe
 set -euo pipefail
 
-# padrões:
-# variável minúscula indica variável local
-# variável maiuscula indica vaiável exportada/importada do ambiente
+
+function check-config {
+    if [ -z ${logdir+x} ]; then 
+        echo-err "O diretório de logs(logdir) não foi definido em '$config_file_path'."
+        exit 1
+    fi
+
+    if [ -z ${logfile+x} ]; then 
+        echo-err "O arquivo de logs(logfile) não foi definido em '$config_file_path'."
+        exit 1
+    fi
+
+    if [ -z ${targetdirs+x} ]; then 
+        echo-err "Os diretórios para backup(targetdirs) não foram definidos em '$config_file_path'."
+        exit 1
+    fi
+    
+    if [ -z ${backupdir+x} ]; then 
+        echo-err "O diretório de armazenamento de backups(backupdir) não foi definido em '$config_file_path'."
+        exit 1
+    fi
+}
 
 function echo-err {
     echo "ERR: $@" >&2
@@ -23,40 +50,40 @@ function echo-info {
     echo "INFO: $@" >&2
 }
 
-if [[ ! -e $logdir ]]; then
-    echo-info "Criando diretório de logs..."
+function check-and-create-directories-and-files-as-needed {
+    if [[ ! -e $logdir ]]; then
+        echo-info "Criando diretório de logs..."
 
-    if ! mkdir -p $logdir; then
-        echo-err "Abortando...."
-        exit 1
+        if ! mkdir -p $logdir; then
+            echo-err "Abortando...."
+            exit 1
+        fi
+
+        echo-info "Diretório de logs criado"
     fi
 
-    echo-info "Diretório de logs criado"
-fi
+    if [[ ! -e $log_path ]]; then
+        echo-info "Criando arquivo de logs..."
 
+        if ! touch "$log_path"; then
+            echo-err "Abortando..."
+            exit 1
+        fi
 
-if [[ ! -e $log_path ]]; then
-    echo "Criando arquivo de logs..."
+        echo-info "Arquivo de logs criado"
+    fi  
 
-    if ! touch "$log_path"; then
-        echo-err "Abortando..."
-        exit 1
+    if [[ ! -e $backupdir ]]; then
+        echo-info "Criando diretório de backups..."
+
+        if ! mkdir -p $backupdir; then
+            echo-err "Abortando...."
+            exit 1
+        fi
+
+        echo-info "Diretório de backups criado"
     fi
-
-    echo "Arquivo de logs criado"
-fi  
-
-if [[ ! -e $backupdir ]]; then
-    echo-info "Criando diretório de backups..."
-
-    if ! mkdir -p $backupdir; then
-        echo-err "Abortando...."
-        exit 1
-    fi
-
-    echo-info "Diretório de backups criado"
-
-fi
+}
 
 # Verifica se os utilitarios necessarios para a execucao estao instalados
 function check-tools {
@@ -118,7 +145,7 @@ function do-verify-backup-integrity {
 
 function do-show-usage {
     cat >&2 <<EOF
-Usage: ${exe_path} <-h|-c <caminho para o arquivo bz2>|-r <backup_file_path> [diretorios para restaurar...]|-b>
+Usage: ${exe_path} <-h|-c <caminho para o arquivo bz2>|-r <caminho para o arquivo bz2> [diretorios para restaurar...]|-b>
 
     -c <caminho>                   : Verifica o sha256 do arquivo <caminho> comparando-o com o log de execução
 
@@ -142,12 +169,16 @@ function do-create-backup {
     declare backup_name="backup-$(date +"%Y%m%d")-$(date +"%H%M").tar.bz2" 
     declare backup_path="$backupdir/$backup_name"    
 
-    archive-directiories $backup_path
+    echo-info "Realizando backup...."
 
+    archive-directiories $backup_path
     backup_end_time=$(date +"%H:%M:%S")
+    
     readonly backup_end_time
 
+    echo-info "Salvando logs de backup..."
     save-log $log_path $backup_path
+    echo-info "Operação finalizada."
 }
 
 # verifica se os diretorios especificados para backup sao diretorios validos.
@@ -171,7 +202,7 @@ function archive-directiories {
     # considera todos os outros parametros como diretórios a serem salvos.
     shift
 
-    tar -jcf "${backup_file}" $targetdirs # 2> /dev/null
+    tar -jcf "${backup_file}" $targetdirs 2> /dev/null
 }
 
 function calculate-hash {
@@ -246,11 +277,14 @@ function do-backup-restore {
 
     echo-info "Iniciando restauração..."
     tar -C / -xf $backup_file $target
-    echo-info "Restauração realizada com sucesso."
+    echo-info "Operação finalizada."
 }
 
 function main {
     check-tools
+    check-config
+    check-and-create-directories-and-files-as-needed
+    
     declare OPTIND optkey
     while getopts "c:bhr:" optkey; do
         case "${optkey}" in
