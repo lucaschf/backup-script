@@ -253,15 +253,7 @@ function do-backup-restore {
     declare -r backup_name="${backup_file##*/}"
     declare target=""
 
-    if ! is-backup-file-in-accepted-format $backup_file; then
-        echo-err "Invalid backup file."
-        abort
-    fi
-
-    if [[ ! -f $backup_file ]]; then
-        echo-err "Backup file not found."
-        abort
-    fi
+    do-verify-backup-integrity $backup_file
 
     declare arg
     for (( i=1; i<$args_count; i++ ));
