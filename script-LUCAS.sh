@@ -144,16 +144,16 @@ function do-verify-backup-integrity {
 
 function do-show-usage {
     cat >&2 <<EOF
-Usage: ${exe_path} <-h|-c <path to the bz2 file>|-r <backup_file_path> [directories to restore...]|-b>
+Usage: ${exe_path} <-h|-c <path to the bz2 file>|-r <path to the bz2 file> [directories to restore...]|-b>
 
-    -c <path>                      : Checks the sha256 of the <path> file by comparing it with the execution log
+    -c <path>          : Checks the sha256 of the <path> file by comparing it with the execution log
 
-    -r <backup_file_path> [dir...] : Restores content from the backup file in <backup_file_path>. If the parameter dir is informed, 
-                                     only the specified directories are restored, otherwise a full restore will be performed
+    -r <path> [dir...] : Restores content from the backup file in <path>. If the parameter dir is informed, 
+                         only the specified directories are restored, otherwise a full restore will be performed
 
-    -b                             : performs the backup according to the .conf file
+    -b                 : performs the backup according to the .conf file
 
-    -h                             : display this help menu
+    -h                 : display this help menu
 
 EOF
 }

@@ -13,11 +13,6 @@ declare -r conf_file_path="$conf_dir/$conf_file_name"
 # fails if any command fails
 set -euo pipefail
 
-if [[ $(id -u) -ne 0 ]]; then
-    echo "Please run as root"
-    exit 1
-fi
-
 function echo-err {
     echo "E: $@" >&2
 }
@@ -68,8 +63,8 @@ function setup-config {
            abort
         fi
 
+        echo-info "Generating default config..."
         write-conf-content
-
         echo-info "Config file created successfully."
     fi  
 }
@@ -96,8 +91,26 @@ backupdir=$default_backupdir
 EOF
 }
 
-setup-config "$@"
-echo-info "Copying main script..."
-cp $script_src_path $install_path
-chmod +x "$install_path/$main_script"
-echo-info "Install complete."
+function main {
+    if [[ $(id -u) -ne 0 ]]; then
+        echo "install: cannot install '$main_script': permission denied. Run as root to proceed"
+        exit 1
+    fi
+    
+    declare -r installed_path="$install_path/$main_script"
+    
+    if [[ ! -f $script_src_path ]]; then
+        echo-err "Unable to locate '$main_script' file."
+        abort
+    fi
+
+    setup-config
+    echo-info "Copying main script..."
+    cp $script_src_path $install_path
+    chmod +x "$installed_path"
+    echo-info "Install complete."
+    echo-info "you can execute the script by running the command: "
+    echo "   (cd $install_path && ./$main_script <OPTION>)"
+}
+
+main "$@"
