@@ -38,6 +38,11 @@ function check-tools {
     }
 }
 
+function abort {
+    echo-err "Aborting...."
+    exit 1
+}
+
 function setup-config {
     echo-info "Setting up configuration..."
 
@@ -45,8 +50,7 @@ function setup-config {
         echo-info "Creating config directory..."
 
         if ! mkdir -p $conf_dir; then
-            echo-err "Aborting...."
-            exit 1
+           abort
         fi
 
         echo-info "Conf directory created successfully."
@@ -56,8 +60,7 @@ function setup-config {
         echo-info "Creating configuration file..."
 
         if ! touch "$conf_file_path"; then
-            echo-err "Aborting..."
-            exit 1
+           abort
         fi
 
         write-conf-content

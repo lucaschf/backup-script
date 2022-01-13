@@ -3,7 +3,6 @@
 # configuration file path
 declare -r config_file_path=/etc/backup_script_lucas/backup.conf
 
-
 if [[ ! -f $config_file_path ]]; then
     echo "ERR: Config file not found."
     exit 1
@@ -18,7 +17,6 @@ declare -r log_path=$logdir/$logfile
 # fails if a variable is accessed without being set
 # fails if any command fails
 set -euo pipefail
-
 
 function check-config {
     if [ -z ${logdir+x} ]; then 
@@ -50,13 +48,17 @@ function echo-info {
     echo "I: $@" >&2
 }
 
+function abort {
+    echo-err "Aborting...."
+    exit 1
+}
+
 function check-and-create-directories-and-files-as-needed {
     if [[ ! -e $logdir ]]; then
         echo-info "Creating the logs directory..."
 
         if ! mkdir -p $logdir; then
-            echo-err "Aborting...."
-            exit 1
+           abort
         fi
 
         echo-info "Logs directory created successfully."
@@ -66,8 +68,7 @@ function check-and-create-directories-and-files-as-needed {
         echo-info "Creating the logs file..."
 
         if ! touch "$log_path"; then
-            echo-err "Aborting..."
-            exit 1
+           abort
         fi
 
         echo-info "Logs file created successfully."
@@ -77,8 +78,7 @@ function check-and-create-directories-and-files-as-needed {
         echo-info "Creating the backup storage directory..."
 
         if ! mkdir -p $backupdir; then
-            echo-err "Aborting..."
-            exit 1
+            abort
         fi
 
         echo-info "backup storage directory created successfully."
@@ -89,20 +89,17 @@ function check-and-create-directories-and-files-as-needed {
 function check-tools {
     which tar >/dev/null || {
         echo-err "tar utility not found."
-        echo-err "Aborting..."
-        return 1
+        abort
     }
 
     which sha256sum >/dev/null || {
         echo-err "sha256sum utility not found."
-        echo-err "Aborting..."
-        return 1
+        abort
     }
 
     which bzip2  >/dev/null || {
         echo-err "bzip2 utility not found."
-        echo-err "Aborting..."        
-        return 1
+        abort
     }
 }
 
@@ -114,7 +111,7 @@ function do-verify-backup-integrity {
 
     if [[ ! $stored_hash_info ]]; then
         echo-err "Backup record '$backup_name' not found."
-        exit 1
+        abort
     fi
    
     IFS=": "
@@ -123,12 +120,12 @@ function do-verify-backup-integrity {
     
     if ! is-backup-file-in-accepted-format $backup_file; then
         echo-err "Invalid backup file."
-        exit 1
+        abort
     fi
 
     if [[ ! -f $backup_file ]]; then
         echo-err "Backup record '$backup_name' not found."
-        exit 1
+        abort
     fi
 
     declare -r current_hash=$(calculate-hash $backup_file)
@@ -191,8 +188,8 @@ function check-targetdirs {
     for path in "${directories[@]}"
      do  
         if [[ ! -d $path ]]; then
-            echo-err "Invalid path'$path'. Aborting...."
-            exit 1
+            echo-err "Invalid path'$path'."
+            abort
         fi
      done
 }
@@ -258,12 +255,12 @@ function do-backup-restore {
 
     if ! is-backup-file-in-accepted-format $backup_file; then
         echo-err "Invalid backup file."
-        exit 1
+        abort
     fi
 
     if [[ ! -f $backup_file ]]; then
         echo-err "Backup file not found."
-        exit 1
+        abort
     fi
 
     declare arg
@@ -273,7 +270,7 @@ function do-backup-restore {
 
         if ! tar -tf $backup_file $arg >/dev/null 2>&1; then
             echo-err "'$arg' directory not found in backup file '$backup_name'."
-            exit 1    
+            abort   
         fi
 
         target+=" $arg"
