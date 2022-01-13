@@ -3,9 +3,10 @@
 declare -r install_path="/usr/sbin"
 declare -r main_script="script-LUCAS.sh"
 declare -r script_src_path="${PWD}/$main_script"
-declare -r conf_dir="/etc/backup_"
-declare -r conf_file="backup.conf"
-declare -r conf_file_full_path="$conf_dir/$conf_file"
+
+declare -r conf_dir="/etc/backup_script_lucas"
+declare -r conf_file_name="backup.conf"
+declare -r conf_file_path="$conf_dir/$conf_file_name"
 
 if [[ $(id -u) -ne 0 ]]; then
     echo "Please run as root"
@@ -38,7 +39,7 @@ function check-tools {
 }
 
 function setup-config {
-    echo-info "Setting up  configuration..."
+    echo-info "Setting up configuration..."
 
     if [[ ! -e $conf_dir ]]; then
         echo-info "Creating config directory..."
@@ -51,10 +52,10 @@ function setup-config {
         echo-info "Conf directory created successfully."
     fi  
 
-    if [[ ! -f $conf_file_full_path ]]; then
+    if [[ ! -f $conf_file_path ]]; then
         echo-info "Creating configuration file..."
 
-        if ! touch "$conf_file_full_path"; then
+        if ! touch "$conf_file_path"; then
             echo-err "Aborting..."
             exit 1
         fi
@@ -66,19 +67,24 @@ function setup-config {
 }
 
 function write-conf-content {
+
+    declare -r default_log_dir = "/var/backup_script_lucas/logs"
+    declare -r default_log_file = "backup-LUCAS.log"
+    declare -r default_targetdirs = "/var"
+    declare -r default_backupdir = "/bckp"
          
-cat <<EOF >> "${conf_file_full_path}"
+cat <<EOF >> "${conf_file_path}"
 # log file location must NOT end with "/"
-logdir=/var/backup-LUCAS/logs
+logdir=$default_log_dir
 
 # log file name
-logfile=backup-LUCAS.log 
+logfile=$default_log_file 
 
 # target directories for backup. For multiple directories use ',' to separate.
-targetdirs=/usr
+targetdirs=$default_targetdirs
 
 # location to save created backups
-backupdir=/bckp 
+backupdir=$default_backupdir 
 EOF
 }
 

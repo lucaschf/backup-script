@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 # configuration file path
-declare -r config_file_path=/etc/backup-LUCAS/backup.conf
+declare -r config_file_path=/etc/backup_script_lucas/backup.conf
 
 
 if [[ ! -f $config_file_path ]]; then
@@ -43,11 +43,11 @@ function check-config {
 }
 
 function echo-err {
-    echo "ERR: $@" >&2
+    echo "E: $@" >&2
 }
 
 function echo-info {
-    echo "INFO: $@" >&2
+    echo "I: $@" >&2
 }
 
 function check-and-create-directories-and-files-as-needed {
