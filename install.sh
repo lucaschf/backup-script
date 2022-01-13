@@ -8,6 +8,11 @@ declare -r conf_dir="/etc/backup_script_lucas"
 declare -r conf_file_name="backup.conf"
 declare -r conf_file_path="$conf_dir/$conf_file_name"
 
+# fails if any pipeline item fails
+# fails if a variable is accessed without being set
+# fails if any command fails
+set -euo pipefail
+
 if [[ $(id -u) -ne 0 ]]; then
     echo "Please run as root"
     exit 1
@@ -71,10 +76,10 @@ function setup-config {
 
 function write-conf-content {
 
-    declare -r default_log_dir = "/var/backup_script_lucas/logs"
-    declare -r default_log_file = "backup-LUCAS.log"
-    declare -r default_targetdirs = "/var"
-    declare -r default_backupdir = "/bckp"
+    declare -r default_log_dir="/var/backup_script_lucas/logs"
+    declare -r default_log_file="backup-LUCAS.log"
+    declare -r default_targetdirs="/var"
+    declare -r default_backupdir="/bckp"
          
 cat <<EOF >> "${conf_file_path}"
 # log file location must NOT end with "/"
@@ -92,6 +97,7 @@ EOF
 }
 
 setup-config "$@"
-cp -v $script_src_path $install_path
-chmod+x "$install_path/$main_script"
+echo-info "Copying main script..."
+cp $script_src_path $install_path
+chmod +x "$install_path/$main_script"
 echo-info "Install complete."
