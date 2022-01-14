@@ -71,7 +71,7 @@ function setup-config {
 
 function write-conf-content {
 
-    declare -r default_log_dir="/var/log/backup_script_lucas"
+    declare -r default_log_dir="/var/log"
     declare -r default_log_file="backup-LUCAS.log"
     declare -r default_targetdirs="/var"
     declare -r default_backupdir="/bckp"
@@ -90,7 +90,7 @@ targetdirs=$default_targetdirs
 backupdir=$default_backupdir 
 EOF
 }
-usage
+
 function main {
     if [[ $(id -u) -ne 0 ]]; then
         echo "install: cannot install '$main_script': permission denied. Run as root to proceed"
