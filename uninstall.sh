@@ -2,7 +2,6 @@
 
 declare -r install_path="/usr/sbin"
 declare -r main_script="script-LUCAS.sh"
-declare -r script_src_path="${PWD}/$main_script"
 
 declare -r conf_dir="/etc/backup_script_lucas"
 declare -r conf_file_name="backup.conf"
@@ -30,7 +29,7 @@ function main {
     fi
 
     echo-info "removing main script...."
-    rm -r $script_src_path $install_path
+    rm -r "$script_src_path/$install_path"
 
     echo-info "removing backups..."
     rm -r $backupdir
