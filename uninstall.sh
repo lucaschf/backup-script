@@ -36,7 +36,7 @@ function main {
     echo-info "backups removed"
 
     echo-info "removing logs..."
-    rm -rf $logdir
+    rm -rf "$logdir/$log_file"
     echo-info "logs removed"
 
     echo-info "removing configuration"
