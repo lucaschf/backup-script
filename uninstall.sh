@@ -32,11 +32,11 @@ function main {
     rm -rf "$install_path/$main_script"
 
     echo-info "removing backups..."
-    rm -rf $backupdir
+    rm -rf $backupdir/backup-*
     echo-info "backups removed"
 
     echo-info "removing logs..."
-    rm -rf "$logdir/$log_file"
+    rm -rf "$logdir/$logfile"
     echo-info "logs removed"
 
     echo-info "removing configuration"
