@@ -43,3 +43,5 @@ function main {
     rm -r $conf_dir
     echo-info "configuration removed"
 }
+
+main "$@"
