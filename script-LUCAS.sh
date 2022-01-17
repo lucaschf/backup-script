@@ -3,11 +3,6 @@
 # configuration file path
 declare -r config_file_path=/etc/backup_script_lucas/backup.conf
 
-if [[ ! -f $config_file_path ]]; then
-    echo "ERR: Config file not found."
-    exit 1
-fi   
-
 source $config_file_path
 
 declare -r exe_path="${0}"
@@ -19,6 +14,12 @@ declare -r log_path=$logdir/$logfile
 set -euo pipefail
 
 function check-config {
+
+    if [ ! -r $config_file_path ]; then
+        echo-err "you don't have permission to read from $log_path"
+        abort
+    fi  
+
     if [ -z ${logdir+x} ]; then 
         echo-err "The log directory(logdir) has not been set in '$config_file_path'."
         exit 1
@@ -49,7 +50,7 @@ function echo-info {
 }
 
 function abort {
-    echo-err "Aborting...."
+    echo-err "Aborting..."
     exit 1
 }
 
@@ -57,8 +58,9 @@ function check-and-create-directories-and-files-as-needed {
     if [[ ! -e $logdir ]]; then
         echo-info "Creating the logs directory..."
 
-        if ! mkdir -p $logdir; then
-           abort
+        if ! mkdir -p $logdir 2>>/dev/null; then
+            echo-err "unable to create logs folder. Check your permisssion."
+            abort
         fi
 
         echo-info "Logs directory created successfully."
@@ -67,8 +69,9 @@ function check-and-create-directories-and-files-as-needed {
     if [[ ! -e $log_path ]]; then
         echo-info "Creating the logs file..."
 
-        if ! touch "$log_path"; then
-           abort
+        if ! touch $log_path 2>>/dev/null ; then
+            echo-err "unable to create logs file. Check your permisssion."
+            abort
         fi
 
         echo-info "Logs file created successfully."
@@ -77,11 +80,23 @@ function check-and-create-directories-and-files-as-needed {
     if [[ ! -e $backupdir ]]; then
         echo-info "Creating the backup storage directory..."
 
-        if ! mkdir -p $backupdir; then
+        if ! mkdir -p $backupdir 2>>/dev/null; then
+            echo-err "unable to create backups folder. Check your permisssion."
             abort
         fi
 
         echo-info "backup storage directory created successfully."
+    fi
+}
+
+function check-write-permission {
+    if [ ! -w $log_path ]; then
+        echo-err "you don't have permission to write in $log_path"
+        abort
+    fi
+
+    if [ ! -w $backupdir ]; then
+        echo-err "you don't have permission to write in $backupdir"
     fi
 }
 
@@ -105,8 +120,18 @@ function check-tools {
 
 function do-verify-backup-integrity {
     declare backup_file="${1}"       
-
     declare -r backup_name="${backup_file##*/}"
+
+    if [ ! -f $log_path ]; then
+        echo-err "Backup log for '$backup_name' not found."
+        abort
+    fi;
+
+    if [ ! -r $log_path ]; then
+        echo-err "you don't have permission to read from $log_path"
+        abort
+    fi
+   
     declare -r stored_hash_info=$(grep "$backup_name:" $log_path)
 
     if [[ ! $stored_hash_info ]]; then
@@ -149,7 +174,10 @@ Usage: ${exe_path} <-h|-c <path to the bz2 file>|-r <path to the bz2 file> [dire
     -c <path>          : Checks the sha256 of the <path> file by comparing it with the execution log
 
     -r <path> [dir...] : Restores content from the backup file in <path>. If the parameter dir is informed, 
-                         only the specified directories are restored, otherwise a full restore will be performed
+                         only the specified directories are restored, otherwise a full restore will be performed.
+                         WARNING: When using the dir parameter, enter the full path of the file or directory 
+                         to restore from the root, without the leading '/'. For example,
+                         if you want to restore the directory '/home/user/important' the argument would be: home/user/important
 
     -b                 : performs the backup according to the .conf file
 
@@ -164,6 +192,9 @@ function do-create-backup {
     backup_start_time=$(date +"%H:%M:%S")
     readonly backup_date
     readonly backup_start_time
+
+    check-and-create-directories-and-files-as-needed
+    check-write-permission
 
     declare backup_name="backup-$(date +"%Y%m%d")-$(date +"%H%M").tar.bz2" 
     declare backup_path="$backupdir/$backup_name"    
@@ -189,6 +220,11 @@ function check-targetdirs {
      do  
         if [[ ! -d $path ]]; then
             echo-err "Invalid path'$path'."
+            abort
+        fi
+
+        if [ ! -r $path ]; then
+            echo-err "cannot read from '$path'"
             abort
         fi
      done
@@ -255,6 +291,11 @@ function do-backup-restore {
 
     do-verify-backup-integrity $backup_file
 
+    if [ ! -r $backup_file ]; then
+        echo-err "you don't have permission to read from $backup_file"
+        abort
+    fi
+
     declare arg
     for (( i=1; i<$args_count; i++ ));
     do
@@ -276,7 +317,6 @@ function do-backup-restore {
 function main {
     check-tools
     check-config
-    check-and-create-directories-and-files-as-needed
     
     declare OPTIND optkey
     while getopts "c:bhr:" optkey; do

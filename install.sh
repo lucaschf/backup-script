@@ -21,23 +21,6 @@ function echo-info {
     echo "I: $@" >&2
 }
 
-function check-tools {
-    which tar >/dev/null || {
-        echo-err "tar utility not found."
-        return 1
-    }
-
-    which sha256sum >/dev/null || {
-        echo-err "sha256sum utility not found."        
-        return 1
-    }
-
-    which bzip2  >/dev/null || {
-        echo-err "bzip2 utility not found."
-        return 1
-    }
-}
-
 function abort {
     echo-err "Aborting...."
     exit 1
@@ -65,6 +48,7 @@ function setup-config {
 
         echo-info "Generating default config..."
         write-conf-content
+        chmod +r $conf_file_path
         echo-info "Config file created successfully."
     fi  
 }

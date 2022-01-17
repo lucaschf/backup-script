@@ -31,6 +31,8 @@ function main {
     echo-info "removing main script...."
     rm -rf "$install_path/$main_script"
 
+    echo-info "removing leftovers. It may take some time..."
+
     echo-info "removing backups..."
     rm -rf $backupdir/backup-*
     echo-info "backups removed"
