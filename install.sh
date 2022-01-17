@@ -67,7 +67,8 @@ logdir=$default_log_dir
 # log file name
 logfile=$default_log_file 
 
-# target directories for backup. For multiple directories use ',' to separate.
+# target directories for backup. For multiple directories use ',' to separate. For names containing whitespaces,
+use quotation marks. For example, the directory /home/user/some stuff should be entered as "/home/user/some stuff".
 targetdirs=$default_targetdirs
 
 # location to save created backups
