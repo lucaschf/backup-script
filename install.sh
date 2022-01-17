@@ -57,7 +57,7 @@ function write-conf-content {
 
     declare -r default_log_dir="/var/log"
     declare -r default_log_file="backup-LUCAS.log"
-    declare -r default_targetdirs="/var"
+    declare -r default_targetdirs="/usr/src"
     declare -r default_backupdir="/bckp"
          
 cat <<EOF >> "${conf_file_path}"
