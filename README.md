@@ -22,7 +22,7 @@ Then run the install script:
 ./install.sh
 ````
 
-**NOTE: **if you try to run the main script directly, without running the install script, you will receive an error since the defined config file will not be found.
+**NOTE:** if you try to run the main script directly, without running the install script, you will receive an error since the defined config file will not be found.
 
 Running the install script, it will copy the main script to the directory '/usr/sbin' (it can be changed as you wish) and the config file will be created . After this, the main script is ready to be executed.
 
@@ -39,4 +39,4 @@ Or, if you prefer, by simple running the following command from any directory:
 (cd /usr/sbin && ./script-LUCAS.sh <option>)
 ````
 
-**NOTE: ** the uninstall script will not be copied, if you want to, copy it manually.  
+**NOTE:** the uninstall script will not be copied, if you want to, copy it manually.  
