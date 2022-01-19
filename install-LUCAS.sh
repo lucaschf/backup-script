@@ -5,7 +5,7 @@ declare -r main_script="script-LUCAS.sh"
 declare -r script_src_path="${PWD}/$main_script"
 
 declare -r conf_dir="/etc/backup_script_lucas"
-declare -r conf_file_name="backup.conf"
+declare -r conf_file_name="script-LUCAS.conf"
 declare -r conf_file_path="$conf_dir/$conf_file_name"
 
 # fails if any pipeline item fails

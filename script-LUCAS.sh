@@ -1,8 +1,7 @@
 #!/usr/bin/bash
 
 # configuration file path
-declare -r config_file_path=/etc/backup_script_lucas/backup.conf
-
+declare -r config_file_path=/etc/backup_script_lucas/script-LUCAS.conf
 source $config_file_path
 
 declare -r exe_path="${0}"
