@@ -39,4 +39,4 @@ Or, if you prefer, by simple running the following command from any directory:
 (cd /usr/sbin && ./script-LUCAS.sh <option>)
 ````
 
-**NOTE: ** the uninstall script will not be copied, if you want to, copy it manually.  
+**NOTE:** the uninstall script will not be copied, if you want to, copy it manually.  
