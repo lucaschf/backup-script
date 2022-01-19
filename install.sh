@@ -78,18 +78,18 @@ EOF
 
 # Checks if the utilities needed for the execution are installed
 function check-tools-and-install-tools-as-needed {
-    which tar >/dev/null || {
-        echo-err "tar utility not found. Trying to install..."
+    which tar 2>>/dev/null || {
+        echo-info "tar utility not found. Trying to install..."
         yum install tar -y
     }
 
-    which bzip2  >/dev/null || {
-        echo-err "bzip2 utility not found. Trying to install"
+    which bzip2 2>>/dev/null || {
+        echo-info "bzip2 utility not found. Trying to install"
         yum install bzip2 -y
     }
 
-    which sha256sum >/dev/null || {
-        echo-err "sha256sum utility not found. Trying to install..."
+    which sha256sum 2>>/dev/null || {
+        echo-info "sha256sum utility not found. Trying to install..."
         yum install sha256sum -y
     }
 }
