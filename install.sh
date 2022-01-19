@@ -76,6 +76,24 @@ backupdir=$default_backupdir
 EOF
 }
 
+# Checks if the utilities needed for the execution are installed
+function check-tools-and-install-tools-as-needed {
+    which tar >/dev/null || {
+        echo-err "tar utility not found. Trying to install..."
+        yum install tar -y
+    }
+
+    which bzip2  >/dev/null || {
+        echo-err "bzip2 utility not found. Trying to install"
+        yum install bzip2 -y
+    }
+
+    which sha256sum >/dev/null || {
+        echo-err "sha256sum utility not found. Trying to install..."
+        yum install sha256sum -y
+    }
+}
+
 function main {
     if [[ $(id -u) -ne 0 ]]; then
         echo "install: cannot install '$main_script': permission denied. Run as root to proceed"
@@ -88,6 +106,8 @@ function main {
         echo-err "Unable to locate '$main_script' file."
         abort
     fi
+
+    check-tools-and-install-tools-as-needed
 
     setup-config
     echo-info "Copying main script..."
