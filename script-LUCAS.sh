@@ -22,22 +22,22 @@ function check-config {
 
     if [ -z ${logdir+x} ]; then 
         echo-err "The log directory(logdir) has not been set in '$config_file_path'."
-        exit 1
+        abort
     fi
 
     if [ -z ${logfile+x} ]; then 
         echo-err "The log file(logfile) has not been set in '$config_file_path'."
-        exit 1
+        abort
     fi
 
     if [ -z ${targetdirs+x} ]; then 
         echo-err "The directories for backup(targetdirs) has not been set in '$config_file_path'."
-        exit 1
+        abort
     fi
     
     if [ -z ${backupdir+x} ]; then 
         echo-err "The backup storage directory(backupdir) has not been set in  '$config_file_path'."
-        exit 1
+        abort
     fi
 }
 
