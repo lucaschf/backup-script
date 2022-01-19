@@ -173,7 +173,11 @@ Usage: ${exe_path} <-h|-c <path to the bz2 file>|-r <path to the bz2 file> [dire
 
     -c <path>          : Checks the sha256 of the <path> file by comparing it with the execution log
 
-    -r <path> [dir...] : Restores content from the backup file in <path>. If the parameter dir is informed, only the specified directories are restored, otherwise a full restore will be performed. WARNING: When using the dir parameter, enter the full path of the file or directory to restore from the root, without the leading '/'. For example, if you want to restore the directory '/home/user/important' the argument would be: home/user/important
+    -r <path> [dir...] : Restores content from the backup file in <path>. If the parameter dir is informed, 
+                         only the specified directories are restored, otherwise a full restore will be performed.
+                         WARNING: When using the dir parameter, enter the full path of the file or directory 
+                         to restore from the root, without the leading '/'. For example,
+                         if you want to restore the directory '/home/user/important' the argument would be: home/user/important
 
     -b                 : performs the backup according to the .conf file
 
