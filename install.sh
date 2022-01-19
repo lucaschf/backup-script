@@ -81,6 +81,8 @@ EOF
 
 # Checks if the utilities needed for the execution are installed
 function check-tools-and-install-tools-as-needed {
+    echo-info "checking required tools..."
+
     which tar 2>>/dev/null || {
         echo-info "tar utility not found. Trying to install..."
         yum install tar -y
