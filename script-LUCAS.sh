@@ -1,44 +1,16 @@
 #!/usr/bin/bash
 
-# configuration file path
-declare -r config_file_path=/etc/backup_script_lucas/script-LUCAS.conf
-source $config_file_path
-
 declare -r exe_path="${0}"
+declare -r logdir=$HOME/log
+declare -r logfile=backup-LUCAS.log
 declare -r log_path=$logdir/$logfile
+declare -r targetdirs=/usr/src
+declare -r backupdir="$HOME/bckp" 
 
 # fails if any pipeline item fails
 # fails if a variable is accessed without being set
 # fails if any command fails
 set -euo pipefail
-
-function check-config {
-
-    if [ ! -r $config_file_path ]; then
-        echo-err "you don't have permission to read from $log_path"
-        abort
-    fi  
-
-    if [ -z ${logdir+x} ]; then 
-        echo-err "The log directory(logdir) has not been set in '$config_file_path'."
-        abort
-    fi
-
-    if [ -z ${logfile+x} ]; then 
-        echo-err "The log file(logfile) has not been set in '$config_file_path'."
-        abort
-    fi
-
-    if [ -z ${targetdirs+x} ]; then 
-        echo-err "The directories for backup(targetdirs) has not been set in '$config_file_path'."
-        abort
-    fi
-    
-    if [ -z ${backupdir+x} ]; then 
-        echo-err "The backup storage directory(backupdir) has not been set in  '$config_file_path'."
-        abort
-    fi
-}
 
 function echo-err {
     echo "E: $@" >&2
@@ -315,8 +287,7 @@ function do-backup-restore {
 
 function main {
     check-tools
-    check-config
-    
+        
     declare OPTIND optkey
     while getopts "c:bhr:" optkey; do
         case "${optkey}" in

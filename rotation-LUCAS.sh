@@ -25,9 +25,10 @@ function check-backup-directory {
     fi
 
     if [ ! -r $BACKUP_PATH ]; then
-        echo-err "you don't have permission to read from $BACKUP_PATH"
+        echo-err "you don't have permission to read from '$BACKUP_PATH'"
         abort
     fi  
+}
 
 function check-and-create-folder-as-needed {
     declare -r path="${1}"
@@ -44,31 +45,48 @@ function check-and-create-folder-as-needed {
 }
 
 function check-and-rotate-backups {
-    declare -r target_folder="{$1}" 
-    declare -r rotation_type="{$2}" # m = montly, h = every 8 hours, d = daily, w = weekly
+    declare -r target_folder="${1}" 
+    declare -r rotation_type="${2}" # m = montly, h = every 8 hours, d = daily, w = weekly
+    declare -r montly_rotation="m"
 
     check-and-create-folder-as-needed $TEMPORARY_FOLDER
     check-and-create-folder-as-needed $target_folder
 
-    if ! ls "$BACKUP_PATH/*$BACKUP_FILE_EXTENSION" &> /dev/null; then
+    declare -r pattern=$BACKUP_PATH/*$BACKUP_FILE_EXTENSION
+    
+    if ! ls $pattern &> /dev/null; then
         abort "No backup to rotate"
-    fi
+    fi    
 
     # remove any temporary saved backup on temporary folder
-    rm -r "$TEMPORARY_FOLDER/*"
+    rm -r "$TEMPORARY_FOLDER/*" &> /dev/null
 
     # move the rotated backup to temporary folder only if is not montly
-    if rotation_type != 'm'; then
-        if ! mv "$target_folder/*$BACKUP_FILE_EXTENSION" $TEMPORARY_FOLDER &> /dev/null; then 
-            abort "unable to rotate backups. Creating temporary copy failed."
+    if [[ $rotation_type != $montly_rotation ]]; then
+  
+        declare -r check=$target_folder/*$BACKUP_FILE_EXTENSION 
+
+        if ls $check &> /dev/null; then
+            if ! mv $check $TEMPORARY_FOLDER &> /dev/null; then 
+                abort 'ended with error. Unable to create secure copy'
+            fi
         fi
     fi
 
     # move the backup to rotation folder
-    mv "$BACKUP_PATH/*$BACKUP_FILE_EXTENSION" $target_folder
+    if ! mv $pattern $target_folder &> /dev/null; then     
+        if [[ $rotation_type = $montly_rotation ]]; then
+            echo "SEM PROBLEMA"
+        else
+            mv $TEMPORARY_FOLDER/*$BACKUP_FILE_EXTENSION $target_folder &> /dev/null
+        fi
+        abort "rotation ended with error"
+    fi
 
     # ensure that temporary folder is empty
-    rm -r "$TEMPORARY_FOLDER/*"
+    rm -rf $TEMPORARY_FOLDER/* &> /dev/null
+
+    echo-info "done"
 }
 
 function main {
@@ -78,24 +96,24 @@ function main {
     while getopts "hdwm" optkey; do
         case "${optkey}" in
             h)
-                check-and-rotate-backups "$BACKUP_PATH/every_eight_hours" 'm' && return 0;
+                check-and-rotate-backups "$BACKUP_PATH/every_eight_hours" "h" && return 0;
                 ;;
             d) 
-                check-and-rotate-backups "$BACKUP_PATH/daily" 'd' && return 0;
+                check-and-rotate-backups "$BACKUP_PATH/daily" "d" && return 0;
                 ;;
             w)
-                check-and-rotate-backups "$BACKUP_PATH/weekly" 'w' && return 0;
+                check-and-rotate-backups "$BACKUP_PATH/weekly" "w" && return 0;
                 ;;
             m)
-                check-and-rotate-backups "$BACKUP_PATH/montly" 'm' && return 0;
+                check-and-rotate-backups "$BACKUP_PATH/montly" "m" && return 0;
                 ;;
             *)
-                abort "invalid option"
+                return 1
                 ;;
         esac
     done
     if [ $OPTIND -eq 1 ]; then
-        abort "expected arg not informed" && return 1
+        abort "expected arg not informed"
     fi
     shift $((OPTIND-1))
 }
