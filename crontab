@@ -1,0 +1,12 @@
+0 */8 * * * /usr/sbin/script-LUCAS.sh -b
+0 */8 * * * /usr/sbin/rotation-LUCAS.sh -h
+
+@daily /usr/sbin/script-LUCAS.sh -b
+@daily /usr/sbin/rotation-LUCAS.sh -d
+
+@weekly /usr/sbin/script-LUCAS.sh -b
+@weekly /usr/sbin/rotation-LUCAS.sh -w
+
+@monthly /usr/sbin/script-LUCAS.sh -b
+@monthly /usr/sbin/rotation-LUCAS.sh -m
+
